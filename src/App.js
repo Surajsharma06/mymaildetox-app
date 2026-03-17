@@ -158,7 +158,7 @@ function Dot({ color }) {
   return <span style={{ width:8, height:8, borderRadius:"50%", background:color, display:"inline-block", flexShrink:0 }}/>;
 }
 
-export default function MailDetox() {
+export default function MyMailDetox() {
   const [screen, setScreen]       = useState("landing");
   const [subs, setSubs]           = useState(SUBS);
   const [selected, setSelected]   = useState([]);
@@ -231,7 +231,7 @@ export default function MailDetox() {
       <div style={{ borderBottom:"1px solid #E9E9E7", padding: mobile?"12px 16px":"12px 24px", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, background:"#fff", zIndex:50 }}>
         <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
           <Logo size={mobile?28:32}/>
-          <span style={{ fontSize: mobile?"16px":"17px", fontWeight:600, color:"#37352f", letterSpacing:"-.2px" }}>MailDetox</span>
+          <span style={{ fontSize: mobile?"16px":"17px", fontWeight:600, color:"#37352f", letterSpacing:"-.2px" }}>MyMailDetox</span>
         </div>
         {!mobile && (
           <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
@@ -240,7 +240,7 @@ export default function MailDetox() {
               onMouseLeave={e => e.target.style.background="transparent"}
             >Log in</button>
             <button className="cta" onClick={startLogin} style={{ width:"auto", padding:"6px 16px", fontSize:"13px" }}>
-              Get MailDetox free →
+              Get MyMailDetox free →
             </button>
           </div>
         )}
@@ -340,7 +340,7 @@ export default function MailDetox() {
         <div style={{ marginTop: mobile?"40px":"56px", paddingTop:"24px", borderTop:"1px solid #E9E9E7", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px" }}>
           <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
             <Logo size={20}/>
-            <span style={{ fontSize:"13px", color:"#9B9A97", fontWeight:400 }}>MailDetox</span>
+            <span style={{ fontSize:"13px", color:"#9B9A97", fontWeight:400 }}>MyMailDetox</span>
           </div>
           <span style={{ fontSize:"12px", color:"#C4C4C2" }}>© 2025 · Built for people who hate inbox clutter</span>
         </div>
@@ -362,7 +362,7 @@ export default function MailDetox() {
             {/* Logo */}
             <div style={{ display:"flex", alignItems:"center", gap:"8px", padding:"8px 10px", marginBottom:"8px" }}>
               <Logo size={26}/>
-              <span style={{ fontSize:"15px", fontWeight:600, color:"#37352f" }}>MailDetox</span>
+              <span style={{ fontSize:"15px", fontWeight:600, color:"#37352f" }}>MyMailDetox</span>
             </div>
             <div className="divider" style={{ margin:"0 0 8px" }}/>
 
@@ -399,7 +399,7 @@ export default function MailDetox() {
             <div style={{ borderBottom:"1px solid #E9E9E7", padding:"11px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, background:"#fff", zIndex:50 }}>
               <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
                 <Logo size={26}/>
-                <span style={{ fontSize:"15px", fontWeight:600, color:"#37352f" }}>MailDetox</span>
+                <span style={{ fontSize:"15px", fontWeight:600, color:"#37352f" }}>MyMailDetox</span>
               </div>
               <div style={{ width:"32px", height:"32px", borderRadius:"50%", background:"#37352f", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"13px", fontWeight:600, color:"#fff" }}>S</div>
             </div>
