@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const SUBS = [
   { id:1,  sender:"Zomato",          email:"noreply@zomato.com",    count:47,  category:"PROMO",      last:"2 hours ago" },
@@ -15,177 +15,197 @@ const SUBS = [
   { id:12, sender:"Nykaa Beauty",    email:"beauty@nykaa.com",      count:88,  category:"PROMO",      last:"Yesterday"   },
 ];
 
-const CAT_STYLE = {
-  PROMO:      { bg:"#F5F5F5", text:"#888", border:"#E5E5E5", dot:"#F4A261" },
-  NEWSLETTER: { bg:"#F5F5F5", text:"#888", border:"#E5E5E5", dot:"#74C0FC" },
-  SPAM:       { bg:"#F5F5F5", text:"#888", border:"#E5E5E5", dot:"#F03E3E" },
+const CAT = {
+  PROMO:      { dot:"#F97316", label:"Promo",      light:{ bg:"#FFF7ED", text:"#C2410C", border:"#FED7AA" }, dark:{ bg:"rgba(249,115,22,.12)", text:"#FB923C", border:"rgba(249,115,22,.2)" } },
+  NEWSLETTER: { dot:"#818CF8", label:"Newsletter", light:{ bg:"#EEF2FF", text:"#4338CA", border:"#C7D2FE" }, dark:{ bg:"rgba(129,140,248,.12)", text:"#A5B4FC", border:"rgba(129,140,248,.2)" } },
+  SPAM:       { dot:"#F87171", label:"Spam",       light:{ bg:"#FEF2F2", text:"#B91C1C", border:"#FECACA" }, dark:{ bg:"rgba(248,113,113,.12)", text:"#FCA5A5", border:"rgba(248,113,113,.2)" } },
 };
 
-const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+const DARK = {
+  bg0:"#0F0F10", bg1:"#141415", bg2:"#1C1C1E", bg3:"#242426",
+  line:"rgba(255,255,255,.07)", line2:"rgba(255,255,255,.11)",
+  t1:"#FFFFFF", t2:"#A0A0A8", t3:"#555560",
+  accent:"#8B5CF6", accent2:"#7C3AED",
+  card:"#141415", cardBorder:"rgba(255,255,255,.07)",
+  topbar:"rgba(15,15,16,.85)",
+  input:"#141415", inputBorder:"rgba(255,255,255,.07)",
+  sidebar:"rgba(15,15,16,.95)",
+  rowHover:"#1C1C1E", rowSel:"rgba(139,92,246,.08)",
+  chkBorder:"rgba(255,255,255,.15)",
+  fabBg:"#1C1C1E", fabBorder:"rgba(255,255,255,.11)",
+  green:"#10B981", red:"#EF4444", blue:"#3B82F6",
+};
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { -webkit-text-size-adjust: 100%; }
-  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #fff; color: #37352f; }
+const LIGHT = {
+  bg0:"#FFFFFF", bg1:"#F9F9F9", bg2:"#F3F3F3", bg3:"#EBEBEB",
+  line:"rgba(0,0,0,.07)", line2:"rgba(0,0,0,.11)",
+  t1:"#111111", t2:"#666666", t3:"#999999",
+  accent:"#2383E2", accent2:"#1A6FC4",
+  card:"#FFFFFF", cardBorder:"rgba(0,0,0,.07)",
+  topbar:"rgba(255,255,255,.85)",
+  input:"#FFFFFF", inputBorder:"rgba(0,0,0,.1)",
+  sidebar:"rgba(255,255,255,.95)",
+  rowHover:"#F3F3F3", rowSel:"#EBF5FF",
+  chkBorder:"rgba(0,0,0,.18)",
+  fabBg:"#111111", fabBorder:"rgba(255,255,255,.15)",
+  green:"#059669", red:"#DC2626", blue:"#2563EB",
+};
 
-  @keyframes fadeIn  { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-  @keyframes slideIn { from { opacity:0; transform:translateX(-6px); } to { opacity:1; transform:translateX(0); } }
-  @keyframes popIn   { 0% { transform:scale(.95); opacity:0; } 100% { transform:scale(1); opacity:1; } }
-  @keyframes shimmer { 0%,100% { opacity:.5; } 50% { opacity:1; } }
-  @keyframes progress { from { width:0%; } }
+const MSGS = ["Connecting to Gmail...","Reading your inbox...","Detecting subscriptions...","Categorising senders...","Almost there...","Loading results..."];
 
-  .fade { animation: fadeIn .3s ease both; }
-  .s1 { animation-delay: .04s; }
-  .s2 { animation-delay: .08s; }
-  .s3 { animation-delay: .12s; }
-  .s4 { animation-delay: .16s; }
-  .s5 { animation-delay: .20s; }
-  .s6 { animation-delay: .24s; }
+const BASE_CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap');
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  html { -webkit-text-size-adjust:100%; }
+  body { font-family:'DM Sans',-apple-system,sans-serif; -webkit-font-smoothing:antialiased; }
 
-  /* Notion-style hover */
-  .n-hover { transition: background .12s ease; border-radius: 6px; }
-  .n-hover:hover { background: rgba(55,53,47,.06); }
+  @keyframes fadeUp   { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes slideIn  { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:translateX(0)} }
+  @keyframes popIn    { 0%{opacity:0;transform:translateY(6px) scale(.97)} 100%{opacity:1;transform:translateY(0) scale(1)} }
+  @keyframes gradShift{ 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+  @keyframes scanMove { 0%{transform:translateX(-100%)} 100%{transform:translateX(400%)} }
+  @keyframes pulseDot { 0%,100%{opacity:.6;transform:scale(1)} 50%{opacity:1;transform:scale(1.15)} }
+  @keyframes float    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+  @keyframes toggleSlide { from{transform:translateX(0)} to{transform:translateX(20px)} }
 
-  /* Sub rows */
-  .sub-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 8px 10px; border-radius: 6px;
-    cursor: pointer; transition: background .12s ease;
-    animation: slideIn .25s ease both;
-    -webkit-tap-highlight-color: transparent;
-    user-select: none;
-  }
-  .sub-row:hover { background: rgba(55,53,47,.05); }
-  .sub-row.sel   { background: #F7F6F3; }
-  .sub-row:active { background: rgba(55,53,47,.08); }
+  .fu1{animation:fadeUp .45s .04s both}
+  .fu2{animation:fadeUp .45s .10s both}
+  .fu3{animation:fadeUp .45s .16s both}
+  .fu4{animation:fadeUp .45s .22s both}
+  .fu5{animation:fadeUp .45s .28s both}
+  .fu6{animation:fadeUp .45s .34s both}
 
-  /* Checkbox — Notion style */
-  .chk {
-    width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0;
-    border: 1.5px solid #C7C6C4; background: #fff;
-    display: flex; align-items: center; justify-content: center;
-    transition: all .12s ease;
-  }
-  .chk.on { background: #2383E2; border-color: #2383E2; }
+  ::-webkit-scrollbar { width:4px; }
+  ::-webkit-scrollbar-thumb { border-radius:2px; }
 
-  /* Filter tabs */
-  .f-tab {
-    padding: 4px 10px; border-radius: 5px; border: none; background: transparent;
-    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500;
-    color: #9B9A97; cursor: pointer; transition: all .12s ease;
-    white-space: nowrap; -webkit-tap-highlight-color: transparent;
-  }
-  .f-tab:hover { background: rgba(55,53,47,.06); color: #37352f; }
-  .f-tab.on    { background: rgba(55,53,47,.08); color: #37352f; }
-
-  /* CTA button */
-  .cta {
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    width: 100%; padding: 10px 16px;
-    background: #2383E2; color: #fff;
-    font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500;
-    border: none; border-radius: 6px; cursor: pointer;
-    transition: background .15s ease, transform .1s ease;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .cta:hover  { background: #1A73D4; }
-  .cta:active { transform: scale(.99); }
-
-  /* Unsub button */
-  .unsub {
-    display: flex; align-items: center; justify-content: center; gap: 6px;
-    width: 100%; padding: 9px 16px;
-    background: #EB5757; color: #fff;
-    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500;
-    border: none; border-radius: 6px; cursor: pointer;
-    transition: background .15s ease;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .unsub:hover:not(:disabled) { background: #D44C4C; }
-  .unsub:disabled { background: #E5E5E5; color: #AAA; cursor: not-allowed; }
-
-  /* Search */
-  .search {
-    width: 100%; padding: 7px 10px 7px 34px;
-    background: #F7F6F3; border: 1px solid #E9E9E7;
-    border-radius: 6px; font-family: 'Inter', sans-serif;
-    font-size: 13px; font-weight: 400; color: #37352f;
-    outline: none; transition: border-color .15s, background .15s;
-  }
-  .search::placeholder { color: #9B9A97; }
-  .search:focus { background: #fff; border-color: #2383E2; }
-
-  /* Divider */
-  .divider { height: 1px; background: #E9E9E7; margin: 0; }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #D3D3D1; border-radius: 3px; }
-
-  /* Mobile */
-  @media (max-width: 480px) {
-    .hide-mobile { display: none !important; }
-    .hero-title  { font-size: 28px !important; letter-spacing: -.5px !important; }
-    .hero-sub    { font-size: 14px !important; }
-    .stat-num    { font-size: 20px !important; }
-    .stat-lbl    { font-size: 10px !important; }
-    .page-title  { font-size: 20px !important; }
-    .f-tab       { font-size: 12px !important; padding: 4px 8px !important; }
+  @media(max-width:640px){
+    .hide-sm { display:none !important; }
+    .sidebar { display:none !important; }
+    .col-hdr { display:none !important; }
+    .col-divider { display:none !important; }
   }
 `;
 
-/* ── Notion-style Logo ── */
-function Logo({ size = 32 }) {
-  const s = size;
+/* ── Logo ── */
+function Logo({ size=28, dark }) {
+  const fill = dark ? "#8B5CF6" : "#2383E2";
   return (
-    <svg width={s} height={s} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="32" height="32" rx="8" fill="#37352F"/>
-      {/* Envelope */}
-      <rect x="5" y="10" width="22" height="14" rx="2.5" fill="white" fillOpacity=".9"/>
-      <path d="M5 12.5L16 19L27 12.5" stroke="#37352F" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-      {/* X — detox mark */}
-      <path d="M19 19.5L21.5 22M21.5 19.5L19 22" stroke="#EB5757" strokeWidth="1.6" strokeLinecap="round"/>
-      {/* Sparkle */}
-      <circle cx="24" cy="8" r="3.5" fill="#F4A261"/>
-      <path d="M24 6.2V6.8M24 9.2V9.8M22.2 8H22.8M25.2 8H25.8" stroke="white" strokeWidth="1.1" strokeLinecap="round"/>
+    <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
+      <defs>
+        <linearGradient id="lgg" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor={dark?"#8B5CF6":"#2383E2"}/>
+          <stop offset="100%" stopColor={dark?"#6D28D9":"#1A6FC4"}/>
+        </linearGradient>
+      </defs>
+      <rect width="28" height="28" rx="8" fill="url(#lgg)"/>
+      <rect x="4" y="9" width="20" height="13" rx="2.5" fill="white" fillOpacity=".92"/>
+      <path d="M4 11.5L14 18L24 11.5" stroke={fill} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M17 17L19 19M19 17L17 19" stroke="#F87171" strokeWidth="1.4" strokeLinecap="round"/>
+      <circle cx="22" cy="6" r="2.2" fill="#10B981"/>
     </svg>
   );
 }
 
-/* ── Category Dot ── */
+/* ── Theme Toggle ── */
+function ThemeToggle({ dark, onToggle }) {
+  return (
+    <button onClick={onToggle} style={{
+      display:"flex", alignItems:"center", gap:"6px",
+      padding:"6px 10px", borderRadius:"8px", cursor:"pointer",
+      border:`1px solid ${dark?"rgba(255,255,255,.1)":"rgba(0,0,0,.1)"}`,
+      background: dark?"rgba(255,255,255,.05)":"rgba(0,0,0,.04)",
+      transition:"all .2s ease",
+    }}>
+      <span style={{ fontSize:"14px" }}>{dark ? "🌙" : "☀️"}</span>
+      <div style={{
+        width:"32px", height:"18px", borderRadius:"9px",
+        background: dark?"#8B5CF6":"#D1D5DB",
+        position:"relative", transition:"background .2s",
+        flexShrink:0,
+      }}>
+        <div style={{
+          width:"14px", height:"14px", borderRadius:"50%",
+          background:"#fff", position:"absolute",
+          top:"2px", left: dark?"16px":"2px",
+          transition:"left .2s ease",
+          boxShadow:"0 1px 3px rgba(0,0,0,.2)",
+        }}/>
+      </div>
+      <span style={{ fontSize:"11px", fontWeight:500, color: dark?"#A0A0A8":"#666", whiteSpace:"nowrap" }}>
+        {dark ? "Dark" : "Light"}
+      </span>
+    </button>
+  );
+}
+
+/* ── Dot ── */
 function Dot({ color }) {
-  return <span style={{ width:8, height:8, borderRadius:"50%", background:color, display:"inline-block", flexShrink:0 }}/>;
+  return <span style={{ width:6, height:6, borderRadius:"50%", background:color, display:"inline-block", flexShrink:0 }}/>;
+}
+
+/* ── Mesh bg (dark only) ── */
+function MeshBg() {
+  return (
+    <div style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:0, overflow:"hidden" }}>
+      <div style={{ position:"absolute", top:"-15%", left:"-5%", width:"55vw", height:"55vw", borderRadius:"50%", background:"radial-gradient(circle,rgba(139,92,246,.07) 0%,transparent 65%)" }}/>
+      <div style={{ position:"absolute", bottom:"-10%", right:"-5%", width:"40vw", height:"40vw", borderRadius:"50%", background:"radial-gradient(circle,rgba(59,130,246,.05) 0%,transparent 65%)" }}/>
+      <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%", opacity:.4 }}>
+        <defs>
+          <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+            <path d="M 48 0 L 0 0 0 48" fill="none" stroke="rgba(255,255,255,.03)" strokeWidth="1"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid)"/>
+      </svg>
+    </div>
+  );
 }
 
 export default function MyMailDetox() {
   const [screen, setScreen]       = useState("landing");
+  const [dark, setDark]           = useState(true);
   const [subs, setSubs]           = useState(SUBS);
   const [selected, setSelected]   = useState([]);
   const [filter, setFilter]       = useState("ALL");
   const [scanning, setScanning]   = useState(false);
   const [scanPct, setScanPct]     = useState(0);
+  const [scanMsg, setScanMsg]     = useState("");
   const [unsubbing, setUnsubbing] = useState(false);
   const [unsubPct, setUnsubPct]   = useState(0);
   const [done, setDone]           = useState(false);
   const [query, setQuery]         = useState("");
   const [mobile, setMobile]       = useState(false);
+  const [mousePos, setMousePos]   = useState({ x:0, y:0 });
+
+  const T = dark ? DARK : LIGHT;
 
   useEffect(() => {
-    const check = () => setMobile(window.innerWidth <= 480);
+    const check = () => setMobile(window.innerWidth <= 640);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
 
+  useEffect(() => {
+    if (mobile || !dark) return;
+    const move = e => setMousePos({ x:e.clientX, y:e.clientY });
+    window.addEventListener("mousemove", move);
+    return () => window.removeEventListener("mousemove", move);
+  }, [mobile, dark]);
+
   const startLogin = () => {
-    setScanning(true); setScanPct(0);
+    setScanning(true); setScanPct(0); setScanMsg(MSGS[0]);
     let p = 0;
     const iv = setInterval(() => {
-      p += Math.random() * 10 + 3;
-      if (p >= 100) { p = 100; clearInterval(iv); setTimeout(() => { setScanning(false); setScreen("dashboard"); }, 500); }
+      p += Math.random() * 9 + 3;
+      setScanMsg(MSGS[Math.min(Math.floor((p/100)*MSGS.length), MSGS.length-1)]);
+      if (p >= 100) {
+        p = 100; clearInterval(iv);
+        setScanMsg("Done! Opening your dashboard...");
+        setTimeout(() => { setScanning(false); setScreen("dashboard"); }, 600);
+      }
       setScanPct(Math.min(p, 100));
-    }, 140);
+    }, 155);
   };
 
   const toggle = (id) => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
@@ -222,366 +242,480 @@ export default function MyMailDetox() {
 
   const total = subs.reduce((a, b) => a + b.count, 0);
 
-  /* ═══════════════════════════ LANDING ══════════════════════════ */
-  if (screen === "landing") return (
-    <div style={{ minHeight:"100vh", background:"#fff", fontFamily:"'Inter',sans-serif" }}>
-      <style>{CSS}</style>
+  /* ── Shared styles ── */
+  const topbarStyle = {
+    position:"sticky", top:0, zIndex:100,
+    background: T.topbar,
+    backdropFilter:"blur(20px) saturate(160%)",
+    WebkitBackdropFilter:"blur(20px)",
+    borderBottom:`1px solid ${T.line}`,
+    padding: mobile?"11px 16px":"13px 28px",
+    display:"flex", alignItems:"center", justifyContent:"space-between",
+  };
 
-      {/* ── Topbar ── */}
-      <div style={{ borderBottom:"1px solid #E9E9E7", padding: mobile?"12px 16px":"12px 24px", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, background:"#fff", zIndex:50 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
-          <Logo size={mobile?28:32}/>
-          <span style={{ fontSize: mobile?"16px":"17px", fontWeight:600, color:"#37352f", letterSpacing:"-.2px" }}>MyMailDetox</span>
+  const cardStyle = {
+    background:T.card, border:`1px solid ${T.cardBorder}`,
+    borderRadius:"13px", transition:"border-color .2s, transform .2s",
+  };
+
+  const btnPrimary = {
+    display:"inline-flex", alignItems:"center", justifyContent:"center", gap:"7px",
+    padding:"9px 18px", border:"none", borderRadius:"9px",
+    background: dark ? "linear-gradient(135deg,#8B5CF6,#6D28D9)" : "#2383E2",
+    color:"#fff", fontFamily:"'DM Sans',sans-serif", fontSize:"13px", fontWeight:500,
+    cursor:"pointer", transition:"all .18s", WebkitTapHighlightColor:"transparent",
+  };
+
+  const btnGhost = {
+    display:"inline-flex", alignItems:"center", gap:"6px",
+    padding:"8px 14px", border:`1px solid ${T.line2}`, borderRadius:"8px",
+    background:"transparent", color:T.t2,
+    fontFamily:"'DM Sans',sans-serif", fontSize:"13px", fontWeight:500,
+    cursor:"pointer", transition:"all .15s",
+  };
+
+  const searchStyle = {
+    width:"100%", padding:"9px 12px 9px 36px",
+    background:T.input, border:`1px solid ${T.inputBorder}`,
+    borderRadius:"9px", color:T.t1,
+    fontFamily:"'DM Sans',sans-serif", fontSize:"13px",
+    outline:"none", transition:"border-color .15s",
+  };
+
+  /* ══════════════ LANDING ══════════════ */
+  if (screen === "landing") return (
+    <div style={{ minHeight:"100vh", background:T.bg0, fontFamily:"'DM Sans',sans-serif", position:"relative", overflow:"hidden", transition:"background .3s" }}>
+      <style>{BASE_CSS}</style>
+      {dark && <MeshBg/>}
+
+      {/* Light mode subtle bg */}
+      {!dark && (
+        <div style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:0,
+          background:"radial-gradient(ellipse at 20% 10%, #EEF2FF 0%, transparent 50%), radial-gradient(ellipse at 80% 90%, #F0FDF4 0%, transparent 50%)" }}/>
+      )}
+
+      {/* Mouse glow - dark only */}
+      {dark && !mobile && (
+        <div style={{ position:"fixed", left:mousePos.x-200, top:mousePos.y-200, width:400, height:400, borderRadius:"50%", background:"radial-gradient(circle,rgba(139,92,246,.06) 0%,transparent 70%)", pointerEvents:"none", zIndex:1, transition:"left .25s ease,top .25s ease" }}/>
+      )}
+
+      {/* Topbar */}
+      <div style={{ ...topbarStyle, zIndex:10 }} className="fu1">
+        <div style={{ display:"flex", alignItems:"center", gap:"9px" }}>
+          <Logo size={28} dark={dark}/>
+          <span style={{ fontSize:"16px", fontWeight:600, color:T.t1, letterSpacing:"-.2px" }}>MyMailDetox</span>
         </div>
-        {!mobile && (
-          <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
-            <button style={{ padding:"6px 14px", background:"transparent", border:"1px solid #E9E9E7", borderRadius:"6px", fontSize:"13px", fontWeight:500, color:"#37352f", cursor:"pointer", fontFamily:"'Inter',sans-serif", transition:"background .12s" }}
-              onMouseEnter={e => e.target.style.background="#F7F6F3"}
-              onMouseLeave={e => e.target.style.background="transparent"}
-            >Log in</button>
-            <button className="cta" onClick={startLogin} style={{ width:"auto", padding:"6px 16px", fontSize:"13px" }}>
-              Get MyMailDetox free →
-            </button>
-          </div>
-        )}
+        <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+          <ThemeToggle dark={dark} onToggle={() => setDark(d => !d)}/>
+          <button style={btnGhost} className="hide-sm">Log in</button>
+          <button style={{ ...btnPrimary, animation:"none" }} onClick={startLogin}>
+            Get started free →
+          </button>
+        </div>
       </div>
 
-      {/* ── Hero ── */}
-      <div style={{ maxWidth:"680px", margin:"0 auto", padding: mobile?"48px 20px 60px":"80px 32px 80px" }}>
+      {/* Hero — wider max width */}
+      <div style={{ maxWidth:"820px", margin:"0 auto", padding: mobile?"56px 20px 60px":"100px 40px 80px", position:"relative", zIndex:2 }}>
 
-        {/* Tag */}
-        <div className="fade s1" style={{ marginBottom:"20px" }}>
-          <span style={{ display:"inline-flex", alignItems:"center", gap:"6px", background:"#F7F6F3", border:"1px solid #E9E9E7", borderRadius:"5px", padding:"4px 10px", fontSize:"12px", fontWeight:500, color:"#9B9A97" }}>
-            📬 The inbox cleaner Unroll.me never built
+        {/* Badge */}
+        <div className="fu2" style={{ marginBottom:"24px" }}>
+          <span style={{
+            display:"inline-flex", alignItems:"center", gap:"7px",
+            background: dark?"rgba(139,92,246,.12)":"rgba(35,131,226,.08)",
+            border: dark?"1px solid rgba(139,92,246,.25)":"1px solid rgba(35,131,226,.2)",
+            borderRadius:"100px", padding:"5px 14px",
+            fontSize:"12px", fontWeight:500,
+            color: dark?"#A78BFA":"#2383E2",
+          }}>
+            <span style={{ width:6, height:6, borderRadius:"50%", background: dark?"#8B5CF6":"#2383E2", display:"inline-block", animation:"pulseDot 2s ease infinite" }}/>
+            The inbox cleaner Unroll.me never built
           </span>
         </div>
 
-        {/* Headline */}
-        <h1 className="fade s2 hero-title" style={{ fontSize: mobile?"28px":"48px", fontWeight:700, color:"#37352f", lineHeight:1.12, letterSpacing: mobile?"-.5px":"-1.5px", marginBottom:"20px" }}>
-          Your inbox.<br/>
-          <span style={{ color:"#2383E2" }}>Finally clean.</span>
-        </h1>
+        {/* Headline — bold + big */}
+        <div className="fu3" style={{ marginBottom:"26px" }}>
+          <h1 style={{
+            fontSize: mobile?"34px": "68px",
+            fontWeight:700, color:T.t1, lineHeight:1.06,
+            letterSpacing: mobile?"-1px":"-2.5px", marginBottom:"22px",
+            maxWidth:"720px",
+          }}>
+            Your inbox.<br/>
+            <span style={dark ? {
+              background:"linear-gradient(135deg,#C4B5FD,#8B5CF6,#6D28D9)",
+              WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+              backgroundClip:"text", backgroundSize:"200% 200%",
+              animation:"gradShift 4s ease infinite",
+            } : {
+              color:"#2383E2",
+            }}>
+              Finally clean.
+            </span>
+          </h1>
+          <p style={{ fontSize: mobile?"16px":"19px", color:T.t2, lineHeight:1.72, fontWeight:400, maxWidth:"560px" }}>
+            100+ useless emails every day? Connect Gmail, see every subscription at a glance, and unsubscribe in one click. Works worldwide.
+          </p>
+        </div>
 
-        <p className="fade s3 hero-sub" style={{ fontSize: mobile?"14px":"16px", color:"#6B6B6B", lineHeight:1.7, fontWeight:400, maxWidth:"520px", marginBottom:"32px" }}>
-          100+ useless emails every day? Connect Gmail, see every subscription at a glance, and unsubscribe with one click. Like Notion — but for your inbox.
-        </p>
+        {/* Feature tags */}
+        <div className="fu4" style={{ display:"flex", flexWrap:"wrap", gap:"8px", marginBottom:"36px" }}>
+          {["✅ Free forever","🔒 Read-only access","⚡ One-click unsubscribe","🌍 Works worldwide"].map((t,i) => (
+            <span key={i} style={{
+              display:"inline-flex", alignItems:"center", gap:"5px",
+              background: dark?"rgba(255,255,255,.05)":T.bg2,
+              border:`1px solid ${T.line}`, borderRadius:"100px",
+              padding:"6px 13px", fontSize:"12px", fontWeight:500, color:T.t2,
+            }}>{t}</span>
+          ))}
+        </div>
 
-        {/* CTA */}
-        <div className="fade s4" style={{ maxWidth:"380px" }}>
+        {/* CTA block */}
+        <div className="fu5" style={{ maxWidth:"420px", marginBottom:"60px" }}>
           {scanning ? (
-            <div style={{ background:"#F7F6F3", border:"1px solid #E9E9E7", borderRadius:"8px", padding:"20px 24px" }}>
+            <div style={{ ...cardStyle, padding:"22px", position:"relative", overflow:"hidden",
+              border: dark?"1px solid rgba(139,92,246,.3)":cardStyle.border,
+            }}>
+              <div style={{ position:"absolute", top:0, left:0, right:0, height:"2px",
+                background:`linear-gradient(90deg,transparent,${T.accent},transparent)`,
+                animation:"scanMove 1.8s ease-in-out infinite",
+              }}/>
               <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"14px" }}>
-                <Logo size={24}/>
-                <span style={{ fontSize:"14px", fontWeight:500, color:"#37352f" }}>Scanning Gmail...</span>
-                <span style={{ marginLeft:"auto", fontSize:"13px", color:"#9B9A97" }}>{Math.round(scanPct)}%</span>
+                <div style={{ animation:"float 2s ease-in-out infinite" }}><Logo size={22} dark={dark}/></div>
+                <span style={{ fontSize:"14px", fontWeight:500, color:T.t1 }}>{scanMsg}</span>
+                <span style={{ marginLeft:"auto", fontSize:"13px", color:T.t3, fontVariantNumeric:"tabular-nums" }}>{Math.round(scanPct)}%</span>
               </div>
-              <div style={{ background:"#E9E9E7", borderRadius:"3px", height:"4px", overflow:"hidden" }}>
-                <div style={{ height:"100%", borderRadius:"3px", background:"#2383E2", width:`${scanPct}%`, transition:"width .18s ease" }}/>
+              <div style={{ background:T.bg3, borderRadius:"4px", height:"3px", overflow:"hidden" }}>
+                <div style={{ height:"100%", borderRadius:"4px", background:`linear-gradient(90deg,${T.accent},${dark?"#A78BFA":T.blue})`, width:`${scanPct}%`, transition:"width .2s ease" }}/>
               </div>
+              <p style={{ marginTop:"10px", fontSize:"11px", color:T.t3 }}>Read-only · Your data never leaves Google</p>
             </div>
           ) : (
             <>
-              <button className="cta" onClick={startLogin} style={{ marginBottom:"10px" }}>
-                <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#fff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#fff" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#fff" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#fff" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+              <button
+                style={{ ...btnPrimary, width:"100%", padding:"14px 24px", fontSize:"15px", borderRadius:"11px", marginBottom:"11px" }}
+                onClick={startLogin}
+                onMouseEnter={e => e.currentTarget.style.transform="translateY(-2px)"}
+                onMouseLeave={e => e.currentTarget.style.transform="translateY(0)"}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24"><path fill="white" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="white" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="white" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="white" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                 Continue with Google — It's free
               </button>
-              <p style={{ fontSize:"12px", color:"#9B9A97", textAlign:"center", fontWeight:400 }}>No credit card · No data selling · Cancel anytime</p>
+              <p style={{ textAlign:"center", fontSize:"12px", color:T.t3 }}>No credit card · No data selling · Cancel anytime</p>
             </>
           )}
         </div>
 
-        {/* Social proof */}
-        <div className="fade s5" style={{ display:"flex", alignItems:"center", gap:"16px", marginTop:"32px", flexWrap:"wrap" }}>
-          {["⭐⭐⭐⭐⭐", "12,000+ emails killed", "Free forever plan"].map((t, i) => (
-            <span key={i} style={{ fontSize:"12px", color:"#9B9A97", fontWeight:400 }}>{t}</span>
-          ))}
-        </div>
-
-        {/* ── Stats ── */}
-        <div className="fade s5" style={{ display:"grid", gridTemplateColumns: mobile?"1fr 1fr":"1fr 1fr 1fr", gap:"1px", background:"#E9E9E7", border:"1px solid #E9E9E7", borderRadius:"8px", overflow:"hidden", marginTop:"48px" }}>
+        {/* Stats */}
+        <div className="fu5" style={{ display:"grid", gridTemplateColumns: mobile?"1fr 1fr":"1fr 1fr 1fr", gap:"12px", marginBottom:"64px" }}>
           {[
-            { num:"12K+", label:"Emails unsubscribed", icon:"📧" },
-            { num:"Zero", label:"Alternatives in India", icon:"🇮🇳" },
-            { num:"Free", label:"Basic plan forever",   icon:"🎁" },
-          ].map((s, i) => (
-            <div key={i} style={{ background:"#fff", padding: mobile?"16px 14px":"20px 20px", textAlign:"center" }}
-              className={mobile && i===2 ? "hide-mobile" : ""}
-            >
-              <div style={{ fontSize: mobile?"20px":"24px", marginBottom:"6px" }}>{s.icon}</div>
-              <div className="stat-num" style={{ fontSize: mobile?"20px":"24px", fontWeight:700, color:"#37352f", letterSpacing:"-.5px", marginBottom:"4px" }}>{s.num}</div>
-              <div className="stat-lbl" style={{ fontSize: mobile?"10px":"12px", color:"#9B9A97", fontWeight:400 }}>{s.label}</div>
+            { num:"12K+", label:"Emails cleaned",     color: dark?"#A78BFA":"#2383E2" },
+            { num:"4.9★", label:"Average rating",     color: dark?"#FCD34D":"#F59E0B" },
+            { num:"Free", label:"Basic plan forever", color: dark?"#6EE7B7":T.green   },
+          ].map((s,i) => (
+            <div key={i} style={{ ...cardStyle, padding: mobile?"16px 12px":"22px 18px", textAlign:"center" }}>
+              <div style={{ fontSize: mobile?"24px":"28px", fontWeight:700, color:s.color, letterSpacing:"-.5px", marginBottom:"5px" }}>{s.num}</div>
+              <div style={{ fontSize:"12px", color:T.t3, fontWeight:400 }}>{s.label}</div>
             </div>
           ))}
         </div>
 
-        {/* ── How it works ── */}
-        <div style={{ marginTop: mobile?"48px":"64px" }}>
-          <h2 style={{ fontSize: mobile?"18px":"22px", fontWeight:700, color:"#37352f", letterSpacing:"-.3px", marginBottom:"4px" }}>How it works</h2>
-          <p style={{ fontSize:"13px", color:"#9B9A97", fontWeight:400, marginBottom:"24px" }}>Three steps. No setup required.</p>
-
-          <div style={{ display:"flex", flexDirection:"column", gap:"2px" }}>
+        {/* How it works */}
+        <div className="fu6">
+          <h2 style={{ fontSize: mobile?"20px":"24px", fontWeight:700, color:T.t1, letterSpacing:"-.4px", marginBottom:"5px" }}>How it works</h2>
+          <p style={{ fontSize:"14px", color:T.t3, marginBottom:"20px" }}>Three steps. No setup. Works in minutes.</p>
+          <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
             {[
-              { icon:"🔐", step:"1", title:"Connect Gmail",   desc:"One-click Google OAuth. Read-only access. We never store emails." },
-              { icon:"📋", step:"2", title:"Review Senders",  desc:"See every subscription, newsletter and promo sorted by email count." },
-              { icon:"🗑️", step:"3", title:"Unsubscribe",     desc:"Select all or individually. We click every unsubscribe link for you." },
-            ].map((s, i) => (
-              <div key={i} className="n-hover" style={{ display:"flex", alignItems:"flex-start", gap:"14px", padding:"12px 10px" }}>
-                <div style={{ width:"32px", height:"32px", borderRadius:"6px", background:"#F7F6F3", border:"1px solid #E9E9E7", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"16px", flexShrink:0 }}>{s.icon}</div>
+              { icon:"🔐", n:"01", title:"Connect Gmail",   desc:"One-click Google OAuth. Read-only. We never store or read your emails.", c: dark?"rgba(139,92,246,.15)":"rgba(35,131,226,.08)" },
+              { icon:"📋", n:"02", title:"Review Senders",  desc:"Every newsletter, promo & subscription listed clearly by sender and count.", c: dark?"rgba(59,130,246,.15)":"rgba(16,185,129,.08)"  },
+              { icon:"🗑️", n:"03", title:"Unsubscribe",     desc:"Select individually or all at once. Gone permanently in one click.",       c: dark?"rgba(16,185,129,.15)":"rgba(249,115,22,.08)"  },
+            ].map((s,i) => (
+              <div key={i} style={{ ...cardStyle, padding: mobile?"14px 16px":"18px 20px", display:"flex", alignItems:"flex-start", gap:"14px" }}>
+                <div style={{ width:"38px", height:"38px", borderRadius:"10px", background:s.c, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"18px", flexShrink:0 }}>{s.icon}</div>
                 <div>
-                  <div style={{ fontSize:"14px", fontWeight:600, color:"#37352f", marginBottom:"3px" }}>{s.title}</div>
-                  <div style={{ fontSize:"13px", color:"#9B9A97", fontWeight:400, lineHeight:1.55 }}>{s.desc}</div>
+                  <div style={{ display:"flex", alignItems:"center", gap:"8px", marginBottom:"4px" }}>
+                    <span style={{ fontSize:"10px", fontWeight:600, color:T.t3, letterSpacing:".5px" }}>{s.n}</span>
+                    <span style={{ fontSize:"14px", fontWeight:600, color:T.t1 }}>{s.title}</span>
+                  </div>
+                  <p style={{ fontSize:"13px", color:T.t2, fontWeight:400, lineHeight:1.6 }}>{s.desc}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* ── Footer ── */}
-        <div style={{ marginTop: mobile?"40px":"56px", paddingTop:"24px", borderTop:"1px solid #E9E9E7", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px" }}>
+        {/* Footer */}
+        <div style={{ marginTop:"56px", paddingTop:"20px", borderTop:`1px solid ${T.line}`, display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px" }}>
           <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
-            <Logo size={20}/>
-            <span style={{ fontSize:"13px", color:"#9B9A97", fontWeight:400 }}>MyMailDetox</span>
+            <Logo size={18} dark={dark}/>
+            <span style={{ fontSize:"13px", color:T.t3 }}>MyMailDetox</span>
           </div>
-          <span style={{ fontSize:"12px", color:"#C4C4C2" }}>© 2025 · Built for people who hate inbox clutter</span>
+          <span style={{ fontSize:"12px", color:T.t3 }}>© 2025 · Built for inbox clutter haters</span>
         </div>
       </div>
     </div>
   );
 
-  /* ═══════════════════════════ DASHBOARD ════════════════════════ */
+  /* ══════════════ DASHBOARD ══════════════ */
   return (
-    <div style={{ minHeight:"100vh", background:"#fff", fontFamily:"'Inter',sans-serif", color:"#37352f" }}>
-      <style>{CSS}</style>
+    <div style={{ minHeight:"100vh", background:T.bg0, fontFamily:"'DM Sans',sans-serif", color:T.t2, transition:"background .3s" }}>
+      <style>{BASE_CSS}</style>
+      {dark && <MeshBg/>}
+      {!dark && <div style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:0, background:"radial-gradient(ellipse at 80% 5%, #EEF2FF 0%, transparent 40%)" }}/>}
 
-      {/* ── Sidebar + Main layout ── */}
-      <div style={{ display:"flex", minHeight:"100vh" }}>
+      <div style={{ display:"flex", minHeight:"100vh", position:"relative", zIndex:1 }}>
 
-        {/* Sidebar — desktop only */}
+        {/* Sidebar */}
         {!mobile && (
-          <div style={{ width:"240px", flexShrink:0, borderRight:"1px solid #E9E9E7", padding:"12px 8px", display:"flex", flexDirection:"column", gap:"2px", position:"sticky", top:0, height:"100vh", overflowY:"auto" }}>
-            {/* Logo */}
-            <div style={{ display:"flex", alignItems:"center", gap:"8px", padding:"8px 10px", marginBottom:"8px" }}>
-              <Logo size={26}/>
-              <span style={{ fontSize:"15px", fontWeight:600, color:"#37352f" }}>MyMailDetox</span>
+          <div className="sidebar" style={{ width:"220px", flexShrink:0, borderRight:`1px solid ${T.line}`, padding:"12px 8px", display:"flex", flexDirection:"column", position:"sticky", top:0, height:"100vh", overflowY:"auto", background:T.sidebar }}>
+            <div style={{ display:"flex", alignItems:"center", gap:"8px", padding:"10px 10px 16px" }}>
+              <Logo size={24} dark={dark}/>
+              <span style={{ fontSize:"14px", fontWeight:600, color:T.t1 }}>MyMailDetox</span>
             </div>
-            <div className="divider" style={{ margin:"0 0 8px" }}/>
+            <div style={{ height:"1px", background:T.line, marginBottom:"8px" }}/>
 
-            {/* Nav items */}
             {[
               { icon:"📬", label:"Subscriptions", active:true },
               { icon:"📊", label:"Analytics",     active:false },
               { icon:"⚙️", label:"Settings",      active:false },
-            ].map((n, i) => (
-              <div key={i} className="n-hover" style={{ display:"flex", alignItems:"center", gap:"8px", padding:"6px 10px", borderRadius:"5px", background: n.active ? "rgba(55,53,47,.08)" : "transparent", cursor:"pointer" }}>
-                <span style={{ fontSize:"15px" }}>{n.icon}</span>
-                <span style={{ fontSize:"14px", fontWeight: n.active?500:400, color: n.active?"#37352f":"#9B9A97" }}>{n.label}</span>
+            ].map((n,i) => (
+              <div key={i} style={{
+                display:"flex", alignItems:"center", gap:"8px",
+                padding:"6px 10px", borderRadius:"7px",
+                background: n.active ? T.bg2 : "transparent",
+                cursor:"pointer", transition:"background .12s",
+                fontSize:"13px", fontWeight: n.active?500:400,
+                color: n.active ? T.t1 : T.t3,
+              }}>
+                <span style={{ fontSize:"14px" }}>{n.icon}</span>
+                <span>{n.label}</span>
               </div>
             ))}
 
             <div style={{ marginTop:"auto" }}>
-              <div className="divider" style={{ marginBottom:"8px" }}/>
+              <div style={{ height:"1px", background:T.line, marginBottom:"8px" }}/>
               <div style={{ display:"flex", alignItems:"center", gap:"8px", padding:"8px 10px" }}>
-                <div style={{ width:"28px", height:"28px", borderRadius:"50%", background:"#37352f", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"12px", fontWeight:600, color:"#fff", flexShrink:0 }}>S</div>
+                <div style={{ width:"26px", height:"26px", borderRadius:"50%", background:`linear-gradient(135deg,${T.accent},${T.accent2})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"11px", fontWeight:700, color:"#fff", flexShrink:0 }}>S</div>
                 <div>
-                  <div style={{ fontSize:"13px", fontWeight:500, color:"#37352f" }}>Suraj</div>
-                  <div style={{ fontSize:"11px", color:"#9B9A97" }}>suraj@gmail.com</div>
+                  <div style={{ fontSize:"12px", fontWeight:500, color:T.t1 }}>Suraj</div>
+                  <div style={{ fontSize:"11px", color:T.t3 }}>suraj@gmail.com</div>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Main Content */}
-        <div style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column" }}>
+        {/* Main */}
+        <div style={{ flex:1, minWidth:0 }}>
 
           {/* Mobile topbar */}
           {mobile && (
-            <div style={{ borderBottom:"1px solid #E9E9E7", padding:"11px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, background:"#fff", zIndex:50 }}>
+            <div style={topbarStyle}>
               <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
-                <Logo size={26}/>
-                <span style={{ fontSize:"15px", fontWeight:600, color:"#37352f" }}>MyMailDetox</span>
+                <Logo size={24} dark={dark}/>
+                <span style={{ fontSize:"15px", fontWeight:600, color:T.t1 }}>MyMailDetox</span>
               </div>
-              <div style={{ width:"32px", height:"32px", borderRadius:"50%", background:"#37352f", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"13px", fontWeight:600, color:"#fff" }}>S</div>
+              <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+                <ThemeToggle dark={dark} onToggle={() => setDark(d=>!d)}/>
+                <div style={{ width:"30px", height:"30px", borderRadius:"50%", background:`linear-gradient(135deg,${T.accent},${T.accent2})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"12px", fontWeight:700, color:"#fff" }}>S</div>
+              </div>
             </div>
           )}
 
-          {/* Page content */}
-          <div style={{ padding: mobile?"20px 16px 120px":"32px 40px 100px", maxWidth:"860px" }}>
-
-            {/* Page title — Notion style */}
-            <div style={{ marginBottom:"28px" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"6px" }}>
-                <span style={{ fontSize: mobile?"28px":"32px" }}>📬</span>
-                <h1 className="page-title" style={{ fontSize: mobile?"20px":"26px", fontWeight:700, color:"#37352f", letterSpacing:"-.3px" }}>Subscriptions</h1>
-              </div>
-              <p style={{ fontSize:"14px", color:"#9B9A97", fontWeight:400, marginLeft: mobile?"0":"42px" }}>Manage and clean your email subscriptions</p>
-            </div>
-
-            {/* Stats row — Notion-style property blocks */}
-            <div style={{ display:"flex", gap: mobile?"8px":"16px", marginBottom:"28px", flexWrap:"wrap" }}>
-              {[
-                { label:"Total senders", value:subs.length,                 icon:"📧" },
-                { label:"Emails wasted", value:total.toLocaleString(),       icon:"📩" },
-                { label:"Selected",      value:selected.length,             icon:"✅" },
-              ].map((s, i) => (
-                <div key={i} style={{ background:"#F7F6F3", border:"1px solid #E9E9E7", borderRadius:"6px", padding: mobile?"10px 12px":"12px 16px", minWidth: mobile?"80px":"110px", flex:1 }}>
-                  <div style={{ fontSize:"11px", color:"#9B9A97", fontWeight:400, marginBottom:"4px", display:"flex", alignItems:"center", gap:"4px" }}>
-                    <span>{s.icon}</span> {s.label}
+          {/* Desktop topbar for dashboard */}
+          {!mobile && (
+            <div style={{ ...topbarStyle, position:"sticky" }}>
+              <span style={{ fontSize:"15px", fontWeight:600, color:T.t1 }}>Subscriptions</span>
+              <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+                <ThemeToggle dark={dark} onToggle={() => setDark(d=>!d)}/>
+                <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+                  <div style={{ textAlign:"right" }}>
+                    <div style={{ fontSize:"11px", color:T.t3 }}>Logged in as</div>
+                    <div style={{ fontSize:"12px", fontWeight:500, color:T.t1 }}>suraj@gmail.com</div>
                   </div>
-                  <div className="stat-num" style={{ fontSize: mobile?"20px":"22px", fontWeight:700, color:"#37352f", letterSpacing:"-.5px" }}>{s.value}</div>
+                  <div style={{ width:"30px", height:"30px", borderRadius:"50%", background:`linear-gradient(135deg,${T.accent},${T.accent2})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"12px", fontWeight:700, color:"#fff" }}>S</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div style={{ padding: mobile?"18px 14px 110px":"28px 36px 90px", maxWidth:"900px" }}>
+
+            {/* Header */}
+            {!mobile && (
+              <div style={{ marginBottom:"24px" }}>
+                <h1 style={{ fontSize:"26px", fontWeight:700, color:T.t1, letterSpacing:"-.4px", marginBottom:"3px" }}>Subscriptions</h1>
+                <p style={{ fontSize:"13px", color:T.t3 }}>Manage and clean your email subscriptions</p>
+              </div>
+            )}
+
+            {/* Stats */}
+            <div style={{ display:"grid", gridTemplateColumns: mobile?"1fr 1fr":"1fr 1fr 1fr", gap:"10px", marginBottom:"20px" }}>
+              {[
+                { label:"Total Senders", value:subs.length,                 color: dark?"#A78BFA":"#2383E2", icon:"📧" },
+                { label:"Emails Wasted", value:total.toLocaleString(),       color: dark?"#60A5FA":T.blue,    icon:"📩" },
+                { label:"Selected",      value:selected.length,             color: dark?"#6EE7B7":T.green,   icon:"✓"  },
+              ].map((s,i) => (
+                <div key={i} style={{ background:T.bg1, border:`1px solid ${T.line}`, borderRadius:"10px", padding: mobile?"11px 12px":"12px 16px", display:"flex", alignItems:"center", gap:"10px" }}>
+                  <span style={{ fontSize:"18px" }}>{s.icon}</span>
+                  <div>
+                    <div style={{ fontSize: mobile?"18px":"20px", fontWeight:700, color:s.color, letterSpacing:"-.4px", lineHeight:1 }}>{s.value}</div>
+                    <div style={{ fontSize:"11px", color:T.t3, marginTop:"2px" }}>{s.label}</div>
+                  </div>
                 </div>
               ))}
             </div>
 
-            {/* Search + Filter bar */}
-            <div style={{ marginBottom:"16px" }}>
-              {/* Search */}
-              <div style={{ position:"relative", marginBottom:"10px" }}>
-                <span style={{ position:"absolute", left:"10px", top:"50%", transform:"translateY(-50%)", fontSize:"13px", color:"#9B9A97", pointerEvents:"none" }}>🔍</span>
-                <input
-                  className="search"
-                  placeholder="Filter by sender or email..."
-                  value={query} onChange={e => setQuery(e.target.value)}
-                />
-              </div>
+            {/* Search */}
+            <div style={{ position:"relative", marginBottom:"9px" }}>
+              <span style={{ position:"absolute", left:"11px", top:"50%", transform:"translateY(-50%)", fontSize:"13px", color:T.t3, pointerEvents:"none" }}>🔍</span>
+              <input style={searchStyle} placeholder="Filter by sender or email..." value={query} onChange={e => setQuery(e.target.value)}
+                onFocus={e => e.target.style.borderColor=T.accent}
+                onBlur={e => e.target.style.borderColor=T.inputBorder}
+              />
+            </div>
 
-              {/* Filter tabs */}
-              <div style={{ display:"flex", alignItems:"center", gap:"4px", overflowX:"auto", paddingBottom:"2px" }}>
-                {[{k:"ALL",l:"All"},{k:"NEWSLETTER",l:"Newsletter"},{k:"PROMO",l:"Promo"},{k:"SPAM",l:"Spam"}].map(f => (
-                  <button key={f.k} className={`f-tab ${filter===f.k?"on":""}`} onClick={() => setFilter(f.k)}>
-                    {f.l}
-                    <span style={{ marginLeft:"4px", fontSize:"11px", color:"#C4C4C2" }}>
-                      {f.k==="ALL" ? subs.length : subs.filter(s=>s.category===f.k).length}
-                    </span>
+            {/* Filters */}
+            <div style={{ display:"flex", gap:"3px", marginBottom:"14px", overflowX:"auto", paddingBottom:"2px", alignItems:"center" }}>
+              {[{k:"ALL",l:"All"},{k:"NEWSLETTER",l:"Newsletter"},{k:"PROMO",l:"Promo"},{k:"SPAM",l:"Spam"}].map(f => {
+                const on = filter === f.k;
+                return (
+                  <button key={f.k} onClick={() => setFilter(f.k)} style={{
+                    padding:"5px 11px", borderRadius:"7px",
+                    border: on?`1px solid ${T.line2}`:"none",
+                    background: on?T.bg2:"transparent",
+                    fontFamily:"'DM Sans',sans-serif", fontSize:"13px", fontWeight:500,
+                    color: on?T.t1:T.t3, cursor:"pointer", transition:"all .14s", whiteSpace:"nowrap",
+                  }}>
+                    {f.l} <span style={{ marginLeft:"3px", color:T.t3, fontSize:"11px" }}>({f.k==="ALL"?subs.length:subs.filter(s=>s.category===f.k).length})</span>
                   </button>
-                ))}
-                <div style={{ marginLeft:"auto" }}>
-                  <button className="f-tab" onClick={toggleAll} style={{ color: allSel?"#EB5757":"#9B9A97" }}>
-                    {allSel ? "Deselect all" : "Select all"}
-                  </button>
-                </div>
-              </div>
+                );
+              })}
+              <button onClick={toggleAll} style={{
+                marginLeft:"auto", padding:"5px 11px", borderRadius:"7px", border:"none",
+                background:"transparent", fontFamily:"'DM Sans',sans-serif", fontSize:"13px",
+                fontWeight:500, color: allSel?T.red:T.t3, cursor:"pointer", whiteSpace:"nowrap",
+              }}>
+                {allSel ? "Deselect all" : "Select all"}
+              </button>
             </div>
 
             {/* Column headers */}
             {!mobile && (
-              <div style={{ display:"grid", gridTemplateColumns:"28px 40px 1fr 120px 80px 80px", gap:"8px", padding:"4px 10px 6px", alignItems:"center" }}>
-                {["", "", "Sender", "Category", "Emails", "Last seen"].map((h, i) => (
-                  <div key={i} style={{ fontSize:"11px", fontWeight:500, color:"#9B9A97", letterSpacing:".3px", textTransform:"uppercase" }}>{h}</div>
-                ))}
-              </div>
+              <>
+                <div className="col-hdr" style={{ display:"grid", gridTemplateColumns:"22px 38px 1fr 120px 70px 85px", gap:"8px", padding:"3px 12px 7px", alignItems:"center" }}>
+                  {["","","Sender","Category","Emails","Last seen"].map((h,i) => (
+                    <div key={i} style={{ fontSize:"10px", fontWeight:500, color:T.t3, letterSpacing:".4px", textTransform:"uppercase" }}>{h}</div>
+                  ))}
+                </div>
+                <div className="col-divider" style={{ height:"1px", background:T.line, marginBottom:"4px" }}/>
+              </>
             )}
-            <div className="divider" style={{ marginBottom:"4px" }}/>
 
-            {/* Subscription list */}
+            {/* List */}
             <div style={{ display:"flex", flexDirection:"column", gap:"1px" }}>
               {filtered.length === 0 ? (
-                <div style={{ padding:"60px 0", textAlign:"center" }}>
-                  <div style={{ fontSize:"40px", marginBottom:"12px" }}>✨</div>
-                  <div style={{ fontSize:"16px", fontWeight:600, color:"#37352f", marginBottom:"6px" }}>Inbox is spotless</div>
-                  <div style={{ fontSize:"13px", color:"#9B9A97", fontWeight:400 }}>No subscriptions found</div>
+                <div style={{ textAlign:"center", padding:"60px 0" }}>
+                  <div style={{ fontSize:"40px", marginBottom:"12px" }}>✓</div>
+                  <div style={{ fontSize:"16px", fontWeight:600, color:T.t1, marginBottom:"5px" }}>Inbox is spotless</div>
+                  <div style={{ fontSize:"13px", color:T.t3 }}>No subscriptions found</div>
                 </div>
-              ) : filtered.map((sub, idx) => (
-                mobile ? (
-                  /* Mobile row */
-                  <div key={sub.id} className={`sub-row ${selected.includes(sub.id)?"sel":""}`} style={{ animationDelay:`${idx*.025}s` }} onClick={() => toggle(sub.id)}>
-                    <div className={`chk ${selected.includes(sub.id)?"on":""}`}>
-                      {selected.includes(sub.id) && <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>}
+              ) : filtered.map((sub, idx) => {
+                const sel = selected.includes(sub.id);
+                const cs = CAT[sub.category][dark?"dark":"light"];
+                return mobile ? (
+                  <div key={sub.id} onClick={() => toggle(sub.id)} style={{
+                    display:"flex", alignItems:"center", gap:"12px",
+                    padding:"10px 12px", borderRadius:"9px",
+                    cursor:"pointer", background: sel?T.rowSel:"transparent",
+                    transition:"background .12s", animation:`slideIn .28s ${idx*.022}s both`,
+                  }}>
+                    <div style={{ width:"17px", height:"17px", borderRadius:"5px", flexShrink:0, border:`1.5px solid ${sel?T.accent:T.chkBorder}`, background: sel?T.accent:"transparent", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      {sel && <svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>}
                     </div>
-                    <div style={{ width:"34px", height:"34px", borderRadius:"6px", background:"#F7F6F3", border:"1px solid #E9E9E7", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"14px", fontWeight:600, color:"#37352f", flexShrink:0 }}>
-                      {sub.sender[0]}
-                    </div>
+                    <div style={{ width:"34px", height:"34px", borderRadius:"9px", background:T.bg2, border:`1px solid ${T.line}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"14px", fontWeight:600, color:T.t1, flexShrink:0 }}>{sub.sender[0]}</div>
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:"14px", fontWeight:500, color:"#37352f", marginBottom:"2px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{sub.sender}</div>
-                      <div style={{ fontSize:"11px", color:"#9B9A97", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{sub.email}</div>
+                      <div style={{ fontSize:"13px", fontWeight:500, color:T.t1, marginBottom:"2px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{sub.sender}</div>
+                      <div style={{ fontSize:"11px", color:T.t3, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{sub.email}</div>
                     </div>
                     <div style={{ textAlign:"right", flexShrink:0 }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:"4px", justifyContent:"flex-end", marginBottom:"3px" }}>
-                        <Dot color={CAT_STYLE[sub.category].dot}/>
-                        <span style={{ fontSize:"11px", color:"#9B9A97", fontWeight:400 }}>{sub.category}</span>
+                      <div style={{ display:"flex", alignItems:"center", gap:"4px", justifyContent:"flex-end", marginBottom:"2px" }}>
+                        <Dot color={CAT[sub.category].dot}/><span style={{ fontSize:"11px", color:T.t3 }}>{CAT[sub.category].label}</span>
                       </div>
-                      <div style={{ fontSize:"12px", color:"#37352f", fontWeight:500 }}>{sub.count}</div>
+                      <div style={{ fontSize:"12px", color:T.t1, fontWeight:500 }}>{sub.count}</div>
                     </div>
                   </div>
                 ) : (
-                  /* Desktop row */
-                  <div key={sub.id} className={`sub-row ${selected.includes(sub.id)?"sel":""}`}
-                    style={{ display:"grid", gridTemplateColumns:"28px 40px 1fr 120px 80px 80px", gap:"8px", alignItems:"center", animationDelay:`${idx*.025}s` }}
-                    onClick={() => toggle(sub.id)}
+                  <div key={sub.id} onClick={() => toggle(sub.id)} style={{
+                    display:"grid", gridTemplateColumns:"22px 38px 1fr 120px 70px 85px",
+                    gap:"8px", alignItems:"center", padding:"9px 12px",
+                    borderRadius:"9px", cursor:"pointer",
+                    background: sel?T.rowSel:"transparent",
+                    transition:"background .12s",
+                    animation:`slideIn .28s ${idx*.022}s both`,
+                  }}
+                    onMouseEnter={e => { if(!sel) e.currentTarget.style.background=T.rowHover; }}
+                    onMouseLeave={e => { if(!sel) e.currentTarget.style.background="transparent"; }}
                   >
-                    {/* Checkbox */}
-                    <div className={`chk ${selected.includes(sub.id)?"on":""}`}>
-                      {selected.includes(sub.id) && <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>}
+                    <div style={{ width:"17px", height:"17px", borderRadius:"5px", border:`1.5px solid ${sel?T.accent:T.chkBorder}`, background: sel?T.accent:"transparent", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      {sel && <svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>}
                     </div>
-                    {/* Avatar */}
-                    <div style={{ width:"34px", height:"34px", borderRadius:"6px", background:"#F7F6F3", border:"1px solid #E9E9E7", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"14px", fontWeight:600, color:"#37352f" }}>
-                      {sub.sender[0]}
-                    </div>
-                    {/* Name + email */}
+                    <div style={{ width:"32px", height:"32px", borderRadius:"8px", background:T.bg2, border:`1px solid ${T.line}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"13px", fontWeight:600, color:T.t1 }}>{sub.sender[0]}</div>
                     <div style={{ minWidth:0 }}>
-                      <div style={{ fontSize:"14px", fontWeight:500, color:"#37352f", marginBottom:"1px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{sub.sender}</div>
-                      <div style={{ fontSize:"12px", color:"#9B9A97", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{sub.email}</div>
+                      <div style={{ fontSize:"13px", fontWeight:500, color:T.t1, marginBottom:"1px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{sub.sender}</div>
+                      <div style={{ fontSize:"11px", color:T.t3, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{sub.email}</div>
                     </div>
-                    {/* Category */}
                     <div style={{ display:"flex", alignItems:"center", gap:"5px" }}>
-                      <Dot color={CAT_STYLE[sub.category].dot}/>
-                      <span style={{ fontSize:"13px", color:"#9B9A97", fontWeight:400 }}>{sub.category.charAt(0)+sub.category.slice(1).toLowerCase()}</span>
+                      <Dot color={CAT[sub.category].dot}/>
+                      <span style={{ fontSize:"12px", color:T.t2 }}>{CAT[sub.category].label}</span>
                     </div>
-                    {/* Count */}
-                    <div style={{ fontSize:"13px", color:"#37352f", fontWeight:400 }}>{sub.count}</div>
-                    {/* Last */}
-                    <div style={{ fontSize:"12px", color:"#9B9A97", fontWeight:400 }}>{sub.last}</div>
+                    <div style={{ fontSize:"13px", color:T.t1, fontWeight:500 }}>{sub.count}</div>
+                    <div style={{ fontSize:"11px", color:T.t3 }}>{sub.last}</div>
                   </div>
-                )
-              ))}
+                );
+              })}
             </div>
-
           </div>
         </div>
       </div>
 
-      {/* ── Fixed bottom bar ── */}
+      {/* Floating action */}
       {selected.length > 0 && !done && !unsubbing && (
-        <div style={{ position:"fixed", bottom: mobile?"16px":"24px", left:"50%", transform:"translateX(-50%)", zIndex:100, animation:"popIn .2s ease" }}>
-          <div style={{ background:"#37352f", borderRadius:"8px", padding:"10px 16px", display:"flex", alignItems:"center", gap:"12px", boxShadow:"0 8px 24px rgba(0,0,0,.2)", whiteSpace:"nowrap" }}>
-            <span style={{ fontSize:"13px", color:"rgba(255,255,255,.7)", fontWeight:400 }}>{selected.length} selected</span>
-            <div style={{ width:"1px", height:"16px", background:"rgba(255,255,255,.15)" }}/>
-            <button onClick={doUnsub} style={{ background:"#EB5757", color:"#fff", border:"none", borderRadius:"5px", padding:"5px 14px", fontSize:"13px", fontWeight:500, cursor:"pointer", fontFamily:"'Inter',sans-serif", transition:"background .12s" }}
-              onMouseEnter={e => e.target.style.background="#D44C4C"}
-              onMouseLeave={e => e.target.style.background="#EB5757"}
-            >
+        <div style={{ position:"fixed", bottom: mobile?"14px":"22px", left:"50%", transform:"translateX(-50%)", zIndex:200, animation:"popIn .18s ease" }}>
+          <div style={{ background:T.fabBg, border:`1px solid ${T.fabBorder}`, borderRadius:"11px", padding:"9px 14px", display:"flex", alignItems:"center", gap:"12px", boxShadow:`0 8px 32px rgba(0,0,0,${dark?.7:.15})`, whiteSpace:"nowrap", backdropFilter:"blur(12px)" }}>
+            <span style={{ fontSize:"13px", color: dark?"rgba(255,255,255,.6)":"rgba(255,255,255,.8)" }}>{selected.length} selected</span>
+            <div style={{ width:"1px", height:"14px", background: dark?"rgba(255,255,255,.1)":"rgba(255,255,255,.2)" }}/>
+            <button onClick={doUnsub} style={{ display:"inline-flex", alignItems:"center", gap:"5px", padding:"7px 16px", border:"none", borderRadius:"7px", background:T.red, color:"#fff", fontFamily:"'DM Sans',sans-serif", fontSize:"13px", fontWeight:500, cursor:"pointer" }}>
               Unsubscribe →
             </button>
-            <button onClick={() => setSelected([])} style={{ background:"transparent", color:"rgba(255,255,255,.5)", border:"none", fontSize:"13px", cursor:"pointer", fontFamily:"'Inter',sans-serif", padding:"4px" }}>✕</button>
+            <button onClick={() => setSelected([])} style={{ background:"transparent", color: dark?"rgba(255,255,255,.4)":"rgba(255,255,255,.6)", border:"none", fontSize:"16px", cursor:"pointer", padding:"2px 4px", lineHeight:1 }}>×</button>
           </div>
         </div>
       )}
 
-      {/* Progress bar */}
+      {/* Progress */}
       {unsubbing && (
-        <div style={{ position:"fixed", bottom: mobile?"16px":"24px", left:"50%", transform:"translateX(-50%)", zIndex:100, animation:"popIn .2s ease", width: mobile?"calc(100% - 32px)":"360px" }}>
-          <div style={{ background:"#37352f", borderRadius:"8px", padding:"14px 18px", boxShadow:"0 8px 24px rgba(0,0,0,.2)" }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"10px" }}>
-              <span style={{ fontSize:"13px", color:"rgba(255,255,255,.9)", fontWeight:500 }}>Unsubscribing...</span>
-              <span style={{ fontSize:"12px", color:"rgba(255,255,255,.5)" }}>{Math.round(unsubPct)}%</span>
+        <div style={{ position:"fixed", bottom: mobile?"14px":"22px", left:"50%", transform:"translateX(-50%)", zIndex:200, animation:"popIn .18s ease", width: mobile?"calc(100% - 28px)":"300px" }}>
+          <div style={{ background:T.fabBg, border:`1px solid ${T.fabBorder}`, borderRadius:"11px", padding:"14px 16px", boxShadow:`0 8px 32px rgba(0,0,0,${dark?.7:.15})` }}>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:"8px" }}>
+              <span style={{ fontSize:"13px", color: dark?"#fff":T.t1, fontWeight:500 }}>Unsubscribing...</span>
+              <span style={{ fontSize:"12px", color: dark?"rgba(255,255,255,.4)":T.t3, fontVariantNumeric:"tabular-nums" }}>{Math.round(unsubPct)}%</span>
             </div>
-            <div style={{ background:"rgba(255,255,255,.15)", borderRadius:"3px", height:"4px", overflow:"hidden" }}>
-              <div style={{ height:"100%", borderRadius:"3px", background:"#2383E2", width:`${unsubPct}%`, transition:"width .12s ease" }}/>
+            <div style={{ background: dark?T.bg3:T.bg2, borderRadius:"3px", height:"3px", overflow:"hidden" }}>
+              <div style={{ height:"100%", borderRadius:"3px", background:`linear-gradient(90deg,${T.accent},${dark?"#A78BFA":T.blue})`, width:`${unsubPct}%`, transition:"width .12s ease" }}/>
             </div>
           </div>
         </div>
       )}
 
-      {/* Success toast */}
+      {/* Success */}
       {done && (
-        <div style={{ position:"fixed", bottom: mobile?"16px":"24px", left:"50%", transform:"translateX(-50%)", zIndex:100, animation:"popIn .2s ease" }}>
-          <div style={{ background:"#37352f", borderRadius:"8px", padding:"10px 18px", boxShadow:"0 8px 24px rgba(0,0,0,.2)", display:"flex", alignItems:"center", gap:"8px", whiteSpace:"nowrap" }}>
-            <span style={{ fontSize:"15px" }}>✅</span>
-            <span style={{ fontSize:"13px", color:"rgba(255,255,255,.9)", fontWeight:500 }}>Done! Senders unsubscribed successfully</span>
+        <div style={{ position:"fixed", bottom: mobile?"14px":"22px", left:"50%", transform:"translateX(-50%)", zIndex:200, animation:"popIn .18s ease" }}>
+          <div style={{ background:T.fabBg, border:`1px solid ${dark?"rgba(16,185,129,.3)":"rgba(5,150,105,.2)"}`, borderRadius:"11px", padding:"10px 18px", boxShadow:`0 8px 32px rgba(0,0,0,${dark?.7:.15})`, display:"flex", alignItems:"center", gap:"8px", whiteSpace:"nowrap" }}>
+            <span style={{ color:T.green, fontSize:"14px", fontWeight:700 }}>✓</span>
+            <span style={{ fontSize:"13px", color: dark?"#fff":T.t1, fontWeight:500 }}>Senders unsubscribed successfully</span>
           </div>
         </div>
       )}
-
     </div>
   );
 }
