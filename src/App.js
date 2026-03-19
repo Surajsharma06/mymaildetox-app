@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
 const SUBS = [
   { id:1,  sender:"Zomato",          email:"noreply@zomato.com",    count:47,  category:"PROMO",      last:"2 hours ago" },
@@ -161,7 +161,7 @@ function MeshBg() {
   );
 }
 
-export default function MyMailDetox() {
+export default function MailDetox() {
   const [screen, setScreen]       = useState("landing");
   const [dark, setDark]           = useState(true);
   const [subs, setSubs]           = useState(SUBS);
@@ -303,7 +303,7 @@ export default function MyMailDetox() {
       <div style={{ ...topbarStyle, zIndex:10 }} className="fu1">
         <div style={{ display:"flex", alignItems:"center", gap:"9px" }}>
           <Logo size={28} dark={dark}/>
-          <span style={{ fontSize:"16px", fontWeight:600, color:T.t1, letterSpacing:"-.2px" }}>MyMailDetox</span>
+          <span style={{ fontSize:"16px", fontWeight:600, color:T.t1, letterSpacing:"-.2px" }}>MailDetox</span>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
           <ThemeToggle dark={dark} onToggle={() => setDark(d => !d)}/>
@@ -447,7 +447,7 @@ export default function MyMailDetox() {
         <div style={{ marginTop:"56px", paddingTop:"20px", borderTop:`1px solid ${T.line}`, display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px" }}>
           <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
             <Logo size={18} dark={dark}/>
-            <span style={{ fontSize:"13px", color:T.t3 }}>MyMailDetox</span>
+            <span style={{ fontSize:"13px", color:T.t3 }}>MailDetox</span>
           </div>
           <span style={{ fontSize:"12px", color:T.t3 }}>© 2025 · Built for inbox clutter haters</span>
         </div>
@@ -469,7 +469,7 @@ export default function MyMailDetox() {
           <div className="sidebar" style={{ width:"220px", flexShrink:0, borderRight:`1px solid ${T.line}`, padding:"12px 8px", display:"flex", flexDirection:"column", position:"sticky", top:0, height:"100vh", overflowY:"auto", background:T.sidebar }}>
             <div style={{ display:"flex", alignItems:"center", gap:"8px", padding:"10px 10px 16px" }}>
               <Logo size={24} dark={dark}/>
-              <span style={{ fontSize:"14px", fontWeight:600, color:T.t1 }}>MyMailDetox</span>
+              <span style={{ fontSize:"14px", fontWeight:600, color:T.t1 }}>MailDetox</span>
             </div>
             <div style={{ height:"1px", background:T.line, marginBottom:"8px" }}/>
 
@@ -512,7 +512,7 @@ export default function MyMailDetox() {
             <div style={topbarStyle}>
               <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
                 <Logo size={24} dark={dark}/>
-                <span style={{ fontSize:"15px", fontWeight:600, color:T.t1 }}>MyMailDetox</span>
+                <span style={{ fontSize:"15px", fontWeight:600, color:T.t1 }}>MailDetox</span>
               </div>
               <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
                 <ThemeToggle dark={dark} onToggle={() => setDark(d=>!d)}/>
@@ -621,7 +621,7 @@ export default function MyMailDetox() {
                 </div>
               ) : filtered.map((sub, idx) => {
                 const sel = selected.includes(sub.id);
-                const cs = CAT[sub.category][dark?"dark":"light"];
+                
                 return mobile ? (
                   <div key={sub.id} onClick={() => toggle(sub.id)} style={{
                     display:"flex", alignItems:"center", gap:"12px",
