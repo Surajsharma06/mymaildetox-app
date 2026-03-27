@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: mymaildetox-app
+    runtime: node
+    rootDir: maildetox-backend
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: REDIRECT_URI
+        value: https://mymaildetox-app.onrender.com/auth/callback
+      - key: FRONTEND_URL
+        value: https://mymaildetox-app.vercel.app
