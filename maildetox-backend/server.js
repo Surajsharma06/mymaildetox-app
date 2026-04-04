@@ -17,8 +17,8 @@ app.use(cors({
 app.use(express.json());
 
 const oauth2Client = new google.auth.OAuth2(
-  '56971612439-kcaeaav7g9qp9ljnl58apdriaq167mpi.apps.googleusercontent.com',
-  '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',
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
   process.env.REDIRECT_URI || 'http://localhost:5000/auth/callback'
 );
 
